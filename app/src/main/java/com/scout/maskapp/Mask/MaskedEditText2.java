@@ -3,6 +3,7 @@ package com.scout.maskapp.Mask;
 import android.content.Context;
 import android.support.v7.widget.AppCompatEditText;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
@@ -35,14 +36,20 @@ public class MaskedEditText2 extends AppCompatEditText {
     }
 
     private void init() {
-        setMask("\\d\\d-\\d\\d\\d-\\d\\d");
+        setMask("++\\d\\d--\\d\\c\\c-\\c\\c");
     }
 
-    /*public String getUnmaskedText(){
-        return TextUtils.isEmpty(mUnmaskedText) ? getText().toString() : mUnmaskedText;
+    public String getUnmaskedText(){
+        String text = "";
+        for (Symbol symbol : mUsedSymbols) {
+            if(symbol instanceof MaskSymbol) {
+                text += symbol.getChar();
+            }
+        }
+        return text;
     }
 
-    public Character getMaskSymbol() {
+    /*public Character getMaskSymbol() {
         return mMaskSymbol;
     }
 
@@ -73,10 +80,13 @@ public class MaskedEditText2 extends AppCompatEditText {
     private ArrayList<Symbol> mUsedSymbols = new ArrayList<>();
 
     public void setMask(String mask) {
-        removeTextChangedListener(mMaskTextWatcher);
-        if(TextUtils.isEmpty(mask)) {
+        if(TextUtils.isEmpty(mask) || TextUtils.equals(mMask, mask)) {
             return;
         }
+        removeTextChangedListener(mMaskTextWatcher);
+        String value = getUnmaskedText();
+        mAvailableSymbols.clear();
+        mUsedSymbols.clear();
         mMask = mask;
         for(int i = 0; i < mask.length(); i++) {
             char c = mask.charAt(i);
@@ -95,35 +105,76 @@ public class MaskedEditText2 extends AppCompatEditText {
             }
         }
         addTextChangedListener(mMaskTextWatcher);
+        setText(value);
     }
 
+    private boolean mShowFutureMask = true;
+
     TextWatcher mMaskTextWatcher = new TextWatcher() {
-        private boolean mIsSelfChange;
-        private String mTextBefore;
+        private int mSelectionStart;
 
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            if (!mIsSelfChange) {
-                mCursorPosition = getSelectionEnd();
-                mTextBefore = s.toString();
-            }
+            mSelectionStart = getSelectionStart();
+            mCursorPosition = getSelectionEnd();
         }
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (mIsSelfChange) {
-                return;
+            int cursorPosition = mCursorPosition;
+            String str = "";
+            if (before != 0) {
+                if(before > mCursorPosition) {
+                    mCursorPosition = before;
+                    cursorPosition = mCursorPosition;
+                }
+                int finalPosition = mCursorPosition - before;
+                int delCount = before;
+                if (count == 0) {
+                    if (before == 1 && mSelectionStart == mCursorPosition) {
+                        for (int i = mCursorPosition; i > 0; i--) {
+                            Symbol symbol = mUsedSymbols.get(i - 1);
+                            if (symbol instanceof MaskSymbol) {
+                                break;
+                            }
+                            if(finalPosition > 0) {
+                                finalPosition--;
+                                delCount++;
+                            }
+                        }
+                    }
+                }
+                if(finalPosition < 0) {
+                    finalPosition = 0;
+                }
+                for (int i = mUsedSymbols.size() - 1; i >= finalPosition; i--) {
+                    Symbol symbol = mUsedSymbols.remove(i);
+                    mAvailableSymbols.add(0, symbol);
+                    if (symbol instanceof MaskSymbol && i >= finalPosition + delCount) {
+                        str = symbol.getChar() + str;
+                    }
+                    if (i < finalPosition + delCount) {
+                        if(mCursorPosition > 0) {
+                            mCursorPosition--;
+                        }
+                    }
+                }
+                if(!mShowFutureMask) {
+                    for (int i = mUsedSymbols.size(); i > 0; i--) {
+                        Symbol symbol = mUsedSymbols.get(i - 1);
+                        if (symbol instanceof MaskSymbol) {
+                            break;
+                        }
+                        mAvailableSymbols.add(0, symbol);
+                        mUsedSymbols.remove(i - 1);
+                        if(mCursorPosition > 0) {
+                            mCursorPosition--;
+                        }
+                    }
+                }
             }
-            mIsSelfChange = true;
-            if(before == 0 && (count == 0 || mTextBefore.length() >= mMask.length())) {
-                setText(mTextBefore);
-                return;
-            }
-            if(before != 0) {
-            }
-            if(count != 0) {
-                String str = "";
-                if (mAvailableSymbols.size() > 0) {
+            if (mAvailableSymbols.size() > 0) {
+                if (count != 0) {
                     for (int i = mUsedSymbols.size() - 1; i >= mCursorPosition; i--) {
                         Symbol symbol = mUsedSymbols.remove(i);
                         mAvailableSymbols.add(0, symbol);
@@ -131,80 +182,117 @@ public class MaskedEditText2 extends AppCompatEditText {
                             str = symbol.getChar() + str;
                         }
                     }
-                    str = s.subSequence(mCursorPosition, mCursorPosition + count) + str;
-                    for (int i = 0; i < str.length() && mAvailableSymbols.size() > 0; i++) {
-                        char c = str.charAt(i);
-                        Symbol symbol = mAvailableSymbols.get(0);
-                        if (symbol instanceof StaticSymbol) {
-                            mUsedSymbols.add(symbol);
-                            mAvailableSymbols.remove(0);
-                            if (symbol.getChar() != c) {
-                                i--;
-                            }
-                            continue;
+                    str = s.subSequence(cursorPosition - before, cursorPosition - before + count) + str;
+                }
+                int cc = 0;
+                for (int i = 0; i < str.length() && mAvailableSymbols.size() > 0; i++) {
+                    char c = str.charAt(i);
+                    Symbol symbol = mAvailableSymbols.get(0);
+                    if (symbol instanceof StaticSymbol) {
+                        mUsedSymbols.add(symbol);
+                        mAvailableSymbols.remove(0);
+                        if (symbol.getChar() != c) {
+                            i--;
                         }
-                        MaskSymbol maskSymbol = (MaskSymbol) symbol;
-                        if (maskSymbol.trySetChar(c)) {
-                            mUsedSymbols.add(symbol);
-                            mAvailableSymbols.remove(0);
+                        if (cc < count) {
+                            mCursorPosition++;
+                        }
+                        continue;
+                    }
+                    MaskSymbol maskSymbol = (MaskSymbol) symbol;
+                    if (maskSymbol.trySetChar(c)) {
+                        mUsedSymbols.add(symbol);
+                        mAvailableSymbols.remove(0);
+                        if (cc < count) {
+                            mCursorPosition++;
+                            cc++;
+                        }
+                    }
+                }
+                if(mSelectionStart != mCursorPosition - 1 && !mShowFutureMask) {
+                    for (int i = mCursorPosition; i > 0; i--) {
+                        Symbol symbol = mUsedSymbols.get(i - 1);
+                        if (symbol instanceof MaskSymbol) {
+                            for (int j = mCursorPosition; j > i; j--) {
+                                symbol = mUsedSymbols.remove(j - 1);
+                                mAvailableSymbols.add(0, symbol);
+                                if(mCursorPosition > 0) {
+                                    mCursorPosition--;
+                                }
+                            }
+                            break;
                         }
                     }
                 }
             }
-            String text = "";
-            for (Symbol symbol : mUsedSymbols) {
-                text += symbol.getChar();
+            if(mShowFutureMask) {
+                if (mSelectionStart == cursorPosition && before - count == 1) {
+                    if (mUsedSymbols.size() > 0 && mAvailableSymbols.size() > 0) {
+                        Symbol symbol = mAvailableSymbols.get(0);
+                        if (symbol instanceof StaticSymbol) {
+                            symbol = mUsedSymbols.get(mUsedSymbols.size() - 1);
+                            mUsedSymbols.remove(mUsedSymbols.size() - 1);
+                            mAvailableSymbols.add(0, symbol);
+                            if(mCursorPosition > 0) {
+                                mCursorPosition--;
+                            }
+                            if (symbol instanceof StaticSymbol) {
+                                for (int j = mUsedSymbols.size() - 1; j > 0; j--) {
+                                    symbol = mUsedSymbols.get(j);
+                                    mUsedSymbols.remove(j);
+                                    mAvailableSymbols.add(0, symbol);
+                                    if(mCursorPosition > 0) {
+                                        mCursorPosition--;
+                                    }
+                                    if (symbol instanceof MaskSymbol) {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                for (int i = 0; i < mAvailableSymbols.size(); i++) {
+                    Symbol symbol = mAvailableSymbols.get(0);
+                    if (symbol instanceof StaticSymbol) {
+                        mUsedSymbols.add(symbol);
+                        mAvailableSymbols.remove(0);
+                        mCursorPosition++;
+                    } else {
+                        break;
+                    }
+                }
             }
-            setText(text);
+            if(mCursorPosition == 0 && mUsedSymbols.size() > 0) {
+                for(int i = 0; i < mUsedSymbols.size(); i++) {
+                    Symbol symbol = mUsedSymbols.get(i);
+                    if(symbol instanceof StaticSymbol) {
+                        mCursorPosition++;
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
 
         @Override
         public void afterTextChanged(Editable s) {
-            if (!mIsSelfChange) {
-                return;
+            String text = "";
+            for (Symbol symbol : mUsedSymbols) {
+                text += symbol.getChar();
             }
-            //setSelection(mCursorPosition > s.length() ? s.length() : mCursorPosition);
-            mIsSelfChange = false;
-        }
-
-        private void insert(int position, CharSequence text) {
-            mUnmaskedText = mUnmaskedText.substring(0, position)
-                    + text
-                    + (position > 0 ? mUnmaskedText.substring(position) : "");
-            int overlapSize = mUnmaskedText.length() - mSourceMaxLen;
-            if(overlapSize > 0) {
-                mUnmaskedText = mUnmaskedText.substring(0, mSourceMaxLen);
+            removeTextChangedListener(mMaskTextWatcher);
+            setText(text);
+            if(mCursorPosition > text.length()) {
+                mCursorPosition = text.length();
+            } else if(mCursorPosition < 0) {
+                mCursorPosition = 0;
             }
-        }
-
-        private void remove(int start, int len){
-            mUnmaskedText = mUnmaskedText.substring(0, start - len)
-                    + mUnmaskedText.substring(start);
-        }
-
-        private int getSourceRemoveLen(int start, int len) {
-            int index = 0;
-            boolean charFound = false;
-            for (int i = start - 1; i >= 0; i--) {
-                if (mMask.charAt(i) == mMaskSymbol) {
-                    index++;
-                    charFound = true;
-                }
-                if(charFound && i <= start - len) {
-                    break;
-                }
+            if (mCursorPosition == mSelectionStart) {
+                setText(text);
             }
-            return index;
-        }
-
-        private int getSourceStartIndex(int resultStartIndex) {
-            int index = 0;
-            for (int i = 0; i < resultStartIndex; i++) {
-                if (mMask.charAt(i) == mMaskSymbol) {
-                    index++;
-                }
-            }
-            return index;
+            addTextChangedListener(mMaskTextWatcher);
+            setSelection(mCursorPosition);
         }
 
     };

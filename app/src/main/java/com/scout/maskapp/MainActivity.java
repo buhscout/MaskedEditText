@@ -18,13 +18,13 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.mask1).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                edit.setMask("+7####45####5");
+                edit.setMask("++\\d\\d--\\d\\d\\d-\\d\\d");
             }
         });
         findViewById(R.id.mask2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                edit.setMask("+8####9###");
+                edit.setMask("+3\\d\\d-\\d\\c\\c-\\c\\c");
             }
         });
         findViewById(R.id.value1).setOnClickListener(new View.OnClickListener() {

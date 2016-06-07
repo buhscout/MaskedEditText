@@ -5,9 +5,4 @@ package com.scout.maskapp.Mask;
  */
 abstract class MaskSymbol extends Symbol {
     public abstract boolean trySetChar(char c);
-
-    @Override
-    public boolean isMask() {
-        return true;
-    }
 }
