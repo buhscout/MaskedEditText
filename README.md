@@ -15,7 +15,7 @@ EditText with mask support
 
 ### Supports mask symbols:
 * **\d** - Any digit
-* **\c** - Any char
-* **\C** - Uppercase char
+* **\c** - Any letter
+* **\C** - Uppercase letter
 
 If **forward_mask** is true, then mask symbols will be show before last entered symbol
