@@ -13,4 +13,5 @@ abstract class Symbol {
     protected void setChar(char c) {
         mChar = c;
     }
+    public abstract boolean isMask();
 }
