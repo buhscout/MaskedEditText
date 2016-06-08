@@ -4,7 +4,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
-import com.scout.maskapp.Mask.MaskedEditText2;
+import com.scout.maskapp.Mask.MaskedEditText;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -13,7 +13,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final MaskedEditText2 edit = (MaskedEditText2)findViewById(R.id.editor);
+        final MaskedEditText edit = (MaskedEditText)findViewById(R.id.editor);
 
         findViewById(R.id.mask1).setOnClickListener(new View.OnClickListener() {
             @Override

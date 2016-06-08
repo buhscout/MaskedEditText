@@ -1,211 +1,298 @@
 package com.scout.maskapp.Mask;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.support.v7.widget.AppCompatEditText;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 
+import com.scout.maskapp.R;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Текстовый редактор с маской ввода
  */
 public class MaskedEditText extends AppCompatEditText {
-    private int mCursorPosition;
-    private String mUnmaskedText = "";
-    private String mMask = "";
-    private Character mMaskSymbol;
-    private int mSourceMaxLen;
+    private MaskTextWatcher mMaskTextWatcher;
+    private boolean mIsForwardMask;
 
     public MaskedEditText(Context context) {
-        super(context);
-        init();
+        this(context, null);
     }
 
     public MaskedEditText(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
+        this(context, attrs, android.support.v7.appcompat.R.attr.editTextStyle);
     }
 
     public MaskedEditText(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context, attrs, defStyleAttr);
     }
 
-    private void init() {
+    private void init(Context context, AttributeSet attrs, int defStyleAttr) {
+        TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.MaskedEditText, defStyleAttr, 0);
 
-    }
-
-    public String getUnmaskedText(){
-        return TextUtils.isEmpty(mUnmaskedText) ? getText().toString() : mUnmaskedText;
-    }
-
-    public Character getMaskSymbol() {
-        return mMaskSymbol;
-    }
-
-    public void setMaskSymbol(Character symbol) {
-        mMaskSymbol = symbol;
-        if(!TextUtils.isEmpty(mMask)) {
-            setMask(mMask);
-        }
-    }
-
-    public String getMask() {
-        return mMask;
-    }
-
-    public void setMask(String mask) {
-        mMask = mask != null ? mask : "";
-        mSourceMaxLen = 0;
-        removeTextChangedListener(mMaskTextWatcher);
-        if(mMaskSymbol == null || TextUtils.isEmpty(mMask)) {
-            return;
-        }
-        for(Character c : mMask.toCharArray()) {
-            if(c == mMaskSymbol) {
-                mSourceMaxLen++;
+        int indexCount = attributes.getIndexCount();
+        String mask = null;
+        for (int i = 0; i < indexCount; i++) {
+            int attribute = attributes.getIndex(i);
+            switch (attribute) {
+                case R.styleable.MaskedEditText_mask:
+                    mask = attributes.getString(attribute);
+                    break;
+                case R.styleable.MaskedEditText_forward_mask:
+                    mIsForwardMask = attributes.getBoolean(attribute, false);
+                    break;
             }
         }
-        if(TextUtils.isEmpty(mUnmaskedText)){
-            mUnmaskedText = getText().toString();
-        }
-        setText("");
-        addTextChangedListener(mMaskTextWatcher);
-        setText(mUnmaskedText);
+        attributes.recycle();
+        setMask(mask);
     }
 
-    TextWatcher mMaskTextWatcher = new TextWatcher() {
-        private boolean mIsSelfChange;
-        private String mTextBefore;
+    public CharSequence getUnmaskedText(){
+        return mMaskTextWatcher != null ? mMaskTextWatcher.getUnmaskedText() : getText();
+    }
+
+    public CharSequence getMask() {
+        return mMaskTextWatcher != null ? mMaskTextWatcher.getMask() : null;
+    }
+
+    public void setMask(CharSequence mask) {
+        if(TextUtils.equals(getMask(), mask)) {
+            return;
+        }
+        if(mMaskTextWatcher != null) {
+            removeTextChangedListener(mMaskTextWatcher);
+        }
+        if(TextUtils.isEmpty(mask)) {
+            mMaskTextWatcher = null;
+            return;
+        }
+        CharSequence text = getUnmaskedText();
+        mMaskTextWatcher = new MaskTextWatcher(mask, mIsForwardMask);
+        addTextChangedListener(mMaskTextWatcher);
+        setText(text);
+    }
+
+    private Symbol getMaskSymbol(char maskChar) {
+        switch (maskChar) {
+            case DecimalSymbol.MaskChar:
+                return new DecimalSymbol();
+            case CharSymbol.MaskChar:
+                return new CharSymbol();
+            case UppercaseCharSymbol.MaskChar:
+                return new UppercaseCharSymbol();
+        }
+        return null;
+    }
+
+    class MaskTextWatcher implements TextWatcher {
+        private CharSequence mMask;
+        private ArrayList<Symbol> mAvailableSymbols = new ArrayList<>();
+        private ArrayList<Symbol> mUsedSymbols = new ArrayList<>();
+        private boolean mIsForwardMask;
+        private int mCursorPosition;
+        private int mSelectionStart;
+        private int mSelectionEnd;
+        private CharSequence mTextBefore;
+
+        public MaskTextWatcher(CharSequence mask, boolean showFutureMask) {
+            mIsForwardMask = showFutureMask;
+            if(TextUtils.isEmpty(mask)) {
+                throw new IllegalArgumentException("Mask is null");
+            }
+            mMask = mask;
+            for(int i = 0; i < mask.length(); i++) {
+                char c = mask.charAt(i);
+                if(c == '\\') {
+                    if(i == mask.length() - 1) {
+                        throw new IllegalArgumentException("Wrong mask format! Position " + String.valueOf(i));
+                    }
+                    Symbol symbol = getMaskSymbol(mask.charAt(i + 1));
+                    if(symbol == null) {
+                        throw new IllegalArgumentException("Wrong mask format! Unsupported mask symbol '" + mask.charAt(i + 1) + "'. Position " + String.valueOf(i));
+                    }
+                    mAvailableSymbols.add(symbol);
+                    i++;
+                } else {
+                    mAvailableSymbols.add(new StaticSymbol(c));
+                }
+            }
+        }
 
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            if (!mIsSelfChange) {
-                mCursorPosition = getSelectionEnd();
-                mTextBefore = s.toString();
-                if(TextUtils.isEmpty(mUnmaskedText)) {
-                    mUnmaskedText = mTextBefore;
-                }
-            }
+            mTextBefore = s;
+            mSelectionStart = getSelectionStart();
+            mSelectionEnd = getSelectionEnd();
         }
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (mIsSelfChange) {
+            mCursorPosition = start + count;
+            if(before == 0 && mAvailableSymbols.size() == 0) {
+                mCursorPosition -= count;
                 return;
             }
-            mIsSelfChange = true;
-            if(before == 0 && (count == 0 || mTextBefore.length() >= mMask.length())) {
-                setText(mTextBefore);
-                return;
+
+            String rightBuffer = "";
+            for (int i = mUsedSymbols.size() - 1; i >= start + before; i--) {
+                Symbol symbol = removeSymbol();
+                if (i >= start + before && symbol.isMask()) {
+                    rightBuffer = symbol.getChar() + rightBuffer;
+                }
             }
-            int srcIndex = getSourceStartIndex(mCursorPosition);
-            if(before != 0) {
-                int removeLen = getSourceRemoveLen(mCursorPosition, before);
-                remove(srcIndex, removeLen);
-                srcIndex -= removeLen;
-                int cnt = 0;
-                for(int i = mCursorPosition; i >= 0; i--) {
-                    if (i - 1 < 0) {
-                        cnt = 0;
+
+            if(before == 1 && count == 0 && mSelectionStart == mSelectionEnd) {
+                for (int i = mUsedSymbols.size() - 1; i >= 0; i--) {
+                    Symbol symbol = mUsedSymbols.get(mUsedSymbols.size() - 1);
+                    if(symbol.isMask()) {
+                        removeSymbol();
                         break;
                     }
-                    if (mMask.charAt(i - 1) == mMaskSymbol) {
-                        break;
-                    }
-                    cnt++;
-                }
-                mCursorPosition -= cnt + before;
-            }
-            if(count != 0) {
-                if (mMask.length() > mTextBefore.length() - before) {
-                    CharSequence addText = s.subSequence(mCursorPosition, mCursorPosition + count);
-                    insert(srcIndex, addText);
-                    int insertLen = addText.length();
-                    for(int i = mCursorPosition; i < mMask.length() && insertLen > 0; i++) {
-                        if(mMask.charAt(i) == mMaskSymbol) {
-                            insertLen--;
-                        } else {
-                            mCursorPosition++;
-                        }
+                    if(!mIsForwardMask || isContainsMaskSymbol(mUsedSymbols, 0, mCursorPosition + 1)) {
+                        mCursorPosition--;
+                        removeSymbol();
                     }
                 }
             }
-            String targetText = "";
-            srcIndex = 0;
-            for (int i = 0; i < mMask.length(); i++) {
-                Character c = mMask.charAt(i);
-                if (srcIndex == mUnmaskedText.length()) {
-                    if(mSourceMaxLen != mUnmaskedText.length()) {
-                        break;
-                    }
-                }
-                if (c == mMaskSymbol) {
-                    targetText += mUnmaskedText.charAt(srcIndex++);
-                } else {
-                    targetText += c;
-                    if(i <= mCursorPosition && mTextBefore.length() <= mCursorPosition) {
-                        mCursorPosition++;
-                    }
+
+            int maskedRemoved = 0;
+            for (int i = mUsedSymbols.size() - 1; i >= start; i--) {
+                Symbol symbol = removeSymbol();
+                if(symbol.isMask()) {
+                    maskedRemoved++;
                 }
             }
-            if (mMask.length() >= s.length()) {
-                mCursorPosition = mCursorPosition + count;
+
+            if (count != 0) {
+                CharSequence insertText = s.subSequence(start, start + count);
+                addText(insertText, mUsedSymbols.size() + mAvailableSymbols.size() - mTextBefore.length() + maskedRemoved, true);
+            }
+            addText(rightBuffer, rightBuffer.length(), false);
+
+            if(!isContainsMaskSymbol(mAvailableSymbols)) {
+                addEndStaticSymbols();
             } else {
-                mCursorPosition = s.length();
+                boolean isLastPosition = mUsedSymbols.size() == mCursorPosition;
+                if(mIsForwardMask) {
+                    int addedCount = addEndStaticSymbols();
+                    if(addedCount > 0 && isLastPosition) {
+                        mCursorPosition += addedCount;
+                    }
+                } else {
+                    int removedCount = removeEndStaticSymbols();
+                    if(removedCount > 0 && isLastPosition) {
+                        mCursorPosition -= removedCount;
+                    }
+                }
             }
-            setText(targetText);
         }
 
         @Override
         public void afterTextChanged(Editable s) {
-            if (!mIsSelfChange) {
-                return;
+            String text = "";
+            for (Symbol symbol : mUsedSymbols) {
+                text += symbol.getChar();
             }
-            setSelection(mCursorPosition > s.length() ? s.length() : mCursorPosition);
-            mIsSelfChange = false;
-        }
-
-        private void insert(int position, CharSequence text) {
-            mUnmaskedText = mUnmaskedText.substring(0, position)
-                    + text
-                    + (position > 0 ? mUnmaskedText.substring(position) : "");
-            int overlapSize = mUnmaskedText.length() - mSourceMaxLen;
-            if(overlapSize > 0) {
-                mUnmaskedText = mUnmaskedText.substring(0, mSourceMaxLen);
+            removeTextChangedListener(mMaskTextWatcher);
+            setText(text);
+            if(mCursorPosition > text.length()) {
+                mCursorPosition = text.length();
+            } else if(mCursorPosition < 0) {
+                mCursorPosition = 0;
             }
+            if (mCursorPosition == mSelectionStart) {
+                setText(text);
+            }
+            addTextChangedListener(mMaskTextWatcher);
+            setSelection(mCursorPosition);
         }
 
-        private void remove(int start, int len){
-            mUnmaskedText = mUnmaskedText.substring(0, start - len)
-                    + mUnmaskedText.substring(start);
+        public CharSequence getMask() {
+            return mMask;
         }
 
-        private int getSourceRemoveLen(int start, int len) {
-            int index = 0;
-            boolean charFound = false;
-            for (int i = start - 1; i >= 0; i--) {
-                if (mMask.charAt(i) == mMaskSymbol) {
-                    index++;
-                    charFound = true;
-                }
-                if(charFound && i <= start - len) {
-                    break;
+        public String getUnmaskedText(){
+            String text = "";
+            for (Symbol symbol : mUsedSymbols) {
+                if(symbol.isMask()) {
+                    text += symbol.getChar();
                 }
             }
-            return index;
+            return text;
         }
 
-        private int getSourceStartIndex(int resultStartIndex) {
-            int index = 0;
-            for (int i = 0; i < resultStartIndex; i++) {
-                if (mMask.charAt(i) == mMaskSymbol) {
-                    index++;
+        private boolean isContainsMaskSymbol(List<Symbol> symbols) {
+            return isContainsMaskSymbol(symbols, 0, symbols.size());
+        }
+
+        private boolean isContainsMaskSymbol(List<Symbol> symbols, int start, int len) {
+            for (int i = start; i < len; i++) {
+                Symbol symbol = symbols.get(i);
+                if (symbol.isMask()) {
+                    return true;
                 }
             }
-            return index;
+            return false;
         }
 
-    };
+        private int removeEndStaticSymbols() {
+            for(int i = 0; mUsedSymbols.size() > 0; i++) {
+                int index = mUsedSymbols.size() - 1;
+                Symbol symbol = mUsedSymbols.get(index);
+                if(symbol.isMask()) {
+                    return i;
+                }
+                mAvailableSymbols.add(0, mUsedSymbols.remove(index));
+            }
+            return 0;
+        }
+
+        private int addEndStaticSymbols() {
+            for(int i = 0; mAvailableSymbols.size() > 0; i++) {
+                Symbol symbol = mAvailableSymbols.get(0);
+                if(symbol.isMask()) {
+                    return i;
+                }
+                mUsedSymbols.add(mAvailableSymbols.remove(0));
+            }
+            return 0;
+        }
+
+        private Symbol removeSymbol() {
+            Symbol symbol = mUsedSymbols.remove(mUsedSymbols.size() - 1);
+            mAvailableSymbols.add(0, symbol);
+            return  symbol;
+        }
+
+        private void addText(CharSequence text, int count, boolean isInserted) {
+            for (int i = 0, maskAdded = 0; i < text.length() && maskAdded <= count && mAvailableSymbols.size() > 0; ) {
+                Symbol symbol = mAvailableSymbols.get(0);
+                if (symbol.isMask()) {
+                    for (; i < text.length(); i++) {
+                        if (((MaskSymbol) symbol).trySetChar(text.charAt(i))) {
+                            mUsedSymbols.add(mAvailableSymbols.remove(0));
+                            i++;
+                            maskAdded++;
+                            break;
+                        }
+                        mCursorPosition--;
+                    }
+                } else {
+                    if (symbol.getChar() == text.charAt(i)) {
+                        i++;
+                    } else if(isInserted) {
+                        mCursorPosition++;
+                    }
+                    mUsedSymbols.add(mAvailableSymbols.remove(0));
+                }
+            }
+        }
+
+    }
 }
