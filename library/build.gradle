@@ -33,7 +33,7 @@ publish {
     licences = ['Apache-2.0']
     website = 'https://github.com/buhscout/MaskedEditText'
     issueTracker = 'https://github.com/buhscout/MaskedEditText/issues'
-    repository = 'https://github.com/buhscout/MaskedEditText.git'
-    bintrayUser = System.getenv('bintray.user')
-    bintrayKey = System.getenv('bintray.apikey')
+    dryRun = 'false'
+    bintrayUser = properties.getProperties().get('bintray.user')
+    bintrayKey = properties.getProperties().get('bintray.apikey')
 }
