@@ -1,9 +1,6 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext.symbols;
 
-/**
- * Created by Scout on 07.06.2016.
- */
-abstract class Symbol {
+public abstract class Symbol {
     private char mChar;
 
     public char getChar() {

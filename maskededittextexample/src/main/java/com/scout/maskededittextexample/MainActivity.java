@@ -1,10 +1,10 @@
-package com.scout.maskapp;
+package com.scout.maskededittextexample;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
-import com.scout.maskapp.Mask.MaskedEditText;
+import com.scout.maskededittext.MaskedEditText;
 
 public class MainActivity extends AppCompatActivity {
 

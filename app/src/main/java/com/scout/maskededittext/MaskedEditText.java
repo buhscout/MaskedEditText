@@ -1,4 +1,4 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -8,14 +8,16 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 
-import com.scout.maskapp.R;
+import com.scout.maskededittext.symbols.CharSymbol;
+import com.scout.maskededittext.symbols.DecimalSymbol;
+import com.scout.maskededittext.symbols.MaskSymbol;
+import com.scout.maskededittext.symbols.StaticSymbol;
+import com.scout.maskededittext.symbols.Symbol;
+import com.scout.maskededittext.symbols.UppercaseCharSymbol;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Текстовый редактор с маской ввода
- */
 public class MaskedEditText extends AppCompatEditText {
     private MaskTextWatcher mMaskTextWatcher;
     private boolean mIsForwardMask;
@@ -40,13 +42,10 @@ public class MaskedEditText extends AppCompatEditText {
         String mask = null;
         for (int i = 0; i < indexCount; i++) {
             int attribute = attributes.getIndex(i);
-            switch (attribute) {
-                case R.styleable.MaskedEditText_mask:
-                    mask = attributes.getString(attribute);
-                    break;
-                case R.styleable.MaskedEditText_forward_mask:
-                    mIsForwardMask = attributes.getBoolean(attribute, false);
-                    break;
+            if (attribute == R.styleable.MaskedEditText_mask) {
+                mask = attributes.getString(attribute);
+            } else if (attribute == R.styleable.MaskedEditText_forward_mask) {
+                mIsForwardMask = attributes.getBoolean(attribute, false);
             }
         }
         attributes.recycle();

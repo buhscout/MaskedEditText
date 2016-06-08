@@ -1,6 +1,6 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext.symbols;
 
-class StaticSymbol extends Symbol {
+public class StaticSymbol extends Symbol {
     public StaticSymbol(char c) {
         setChar(c);
     }

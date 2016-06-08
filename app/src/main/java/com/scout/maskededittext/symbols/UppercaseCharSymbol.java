@@ -1,9 +1,6 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext.symbols;
 
-/**
- * Created by Scout on 07.06.2016.
- */
-class UppercaseCharSymbol extends MaskSymbol {
+public class UppercaseCharSymbol extends MaskSymbol {
     public static final char MaskChar = 'C';
 
     @Override

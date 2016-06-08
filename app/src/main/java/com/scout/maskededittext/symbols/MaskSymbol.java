@@ -1,9 +1,6 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext.symbols;
 
-/**
- * Created by Scout on 07.06.2016.
- */
-abstract class MaskSymbol extends Symbol {
+public abstract class MaskSymbol extends Symbol {
     public abstract boolean trySetChar(char c);
 
     @Override

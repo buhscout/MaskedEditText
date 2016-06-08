@@ -1,9 +1,6 @@
-package com.scout.maskapp.Mask;
+package com.scout.maskededittext.symbols;
 
-/**
- * Created by Scout on 07.06.2016.
- */
-class DecimalSymbol extends MaskSymbol {
+public class DecimalSymbol extends MaskSymbol {
     public static final char MaskChar = 'd';
 
     @Override

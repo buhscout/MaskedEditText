@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/MaskedEditText.iml" filepath="$PROJECT_DIR$/MaskedEditText.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/maskededittextexample/maskededittextexample.iml" filepath="$PROJECT_DIR$/maskededittextexample/maskededittextexample.iml" />
+    </modules>
+  </component>
+</project>
