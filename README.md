@@ -1,3 +1,4 @@
+[![](https://jitpack.io/v/buhscout/MaskedEditText.svg)](https://jitpack.io/#buhscout/MaskedEditText)
 # MaskedEditText
 Android EditText widget with custom masks support
 
