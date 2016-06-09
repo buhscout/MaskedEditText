@@ -24,7 +24,7 @@ dependencies {
 E.g. for phone number with format +7 123 456-78-90:
 
 ```
-<com.scout.maskededittext.MaskedEditText
+<com.scout.MaskedEditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"`
         app:mask="+7 \\d\\d\\d \\d\\d\\d-\\d\\d-\\d\\d"
