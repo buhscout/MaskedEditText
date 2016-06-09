@@ -1,4 +1,4 @@
-package com.scout;
+package com.scout.widget;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -7,8 +7,6 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
-
-import com.scout.maskededittext.R;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;

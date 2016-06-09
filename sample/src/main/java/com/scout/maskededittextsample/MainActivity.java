@@ -3,7 +3,7 @@ package com.scout.maskededittextsample;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
-import com.scout.MaskedEditText;
+import com.scout.widget.MaskedEditText;
 
 import java.util.Arrays;
 import java.util.List;
