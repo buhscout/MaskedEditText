@@ -26,19 +26,33 @@ public class MainActivity extends AppCompatActivity {
         maskedEditText.setMask("+\\z \\d\\d\\d \\d\\d\\d-\\d\\d-\\d\\d");
     }
 
-    // If custom MaskSymbol is nested class, then it must be a static
+    /**
+     * This custom mask symbol forbids to enter any character except '1', '2', '3',
+     * where using '\z' mask symbol
+     **/
     public static class CountrySymbol extends MaskedEditText.MaskSymbol {
         // Mask character
         public static final char Symbol = 'z';
 
+        // Allowed characters
         private List<Character> mAvailableCharacters = Arrays.asList('1', '2', '7');
 
+        /**
+         * Accept or deny input character for this mask symbol
+         **/
         @Override
-        public boolean isAccept(char c) {
-            /*
-                Any code for accept or deny input character
-             */
-            return mAvailableCharacters.contains(c);
+        public boolean isAccept(char inputCharacter) {
+            return mAvailableCharacters.contains(inputCharacter);
+        }
+
+        /**
+         * You can change input character before it will be set to EditText
+         * This method invoked after isAccept method
+         **/
+        @Override
+        protected void setChar(char inputCharacter) {
+            char newCharacter = Character.toUpperCase(inputCharacter);
+            super.setChar(newCharacter);
         }
     }
 }
