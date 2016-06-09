@@ -71,5 +71,15 @@ public static class CountrySymbol extends MaskedEditText.MaskSymbol {
     public boolean isAccept(char inputCharacter) {
         return mAvailableCharacters.contains(inputCharacter);
     }
+    
+    /**
+    * You can change input character before it will be set to EditText
+    * This method invoked after isAccept method
+    **/
+    @Override
+    protected void setChar(char inputCharacter) {
+        char newCharacter = Character.toUpperCase(inputCharacter);
+        super.setChar(newCharacter);
+    }
 }
 ```
