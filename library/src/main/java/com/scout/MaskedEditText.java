@@ -1,4 +1,4 @@
-package com.scout.maskededittext;
+package com.scout;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -8,19 +8,19 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 
-import com.scout.maskededittext.symbols.CharSymbol;
-import com.scout.maskededittext.symbols.DecimalSymbol;
-import com.scout.maskededittext.symbols.MaskSymbol;
-import com.scout.maskededittext.symbols.StaticSymbol;
-import com.scout.maskededittext.symbols.Symbol;
-import com.scout.maskededittext.symbols.UppercaseCharSymbol;
+import com.scout.maskededittext.R;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MaskedEditText extends AppCompatEditText {
     private MaskTextWatcher mMaskTextWatcher;
     private boolean mIsForwardMask;
+    private Map<Character, Class<? extends MaskSymbol>> mSupportSymbols = new HashMap<>();
+    private CharSequence mMask;
 
     public MaskedEditText(Context context) {
         this(context, null);
@@ -49,7 +49,24 @@ public class MaskedEditText extends AppCompatEditText {
             }
         }
         attributes.recycle();
+        initSupportSymbols();
         setMask(mask);
+    }
+
+    protected void initSupportSymbols() {
+        registerMaskSymbol(CharSymbol.MaskChar, CharSymbol.class);
+        registerMaskSymbol(DecimalSymbol.MaskChar, DecimalSymbol.class);
+        registerMaskSymbol(UppercaseCharSymbol.MaskChar, UppercaseCharSymbol.class);
+    }
+
+    public void registerMaskSymbol(char symbol, Class<? extends MaskSymbol> type) {
+        if(type == null) {
+            throw new IllegalArgumentException("Symbol type is null");
+        }
+        mSupportSymbols.put(symbol, type);
+        if(mMaskTextWatcher != null) {
+            refreshMask();
+        }
     }
 
     public CharSequence getUnmaskedText(){
@@ -57,40 +74,32 @@ public class MaskedEditText extends AppCompatEditText {
     }
 
     public CharSequence getMask() {
-        return mMaskTextWatcher != null ? mMaskTextWatcher.getMask() : null;
+        return mMask;
     }
 
     public void setMask(CharSequence mask) {
         if(TextUtils.equals(getMask(), mask)) {
             return;
         }
+        mMask = mask;
+        refreshMask();
+    }
+
+    public void refreshMask() {
         if(mMaskTextWatcher != null) {
             removeTextChangedListener(mMaskTextWatcher);
         }
-        if(TextUtils.isEmpty(mask)) {
+        if(TextUtils.isEmpty(mMask)) {
             mMaskTextWatcher = null;
             return;
         }
-        CharSequence text = getUnmaskedText();
-        mMaskTextWatcher = new MaskTextWatcher(mask, mIsForwardMask);
+        CharSequence value = getUnmaskedText();
+        mMaskTextWatcher = new MaskTextWatcher(mMask, mIsForwardMask);
         addTextChangedListener(mMaskTextWatcher);
-        setText(text);
-    }
-
-    private Symbol getMaskSymbol(char maskChar) {
-        switch (maskChar) {
-            case DecimalSymbol.MaskChar:
-                return new DecimalSymbol();
-            case CharSymbol.MaskChar:
-                return new CharSymbol();
-            case UppercaseCharSymbol.MaskChar:
-                return new UppercaseCharSymbol();
-        }
-        return null;
+        setText(value);
     }
 
     class MaskTextWatcher implements TextWatcher {
-        private CharSequence mMask;
         private ArrayList<Symbol> mAvailableSymbols = new ArrayList<>();
         private ArrayList<Symbol> mUsedSymbols = new ArrayList<>();
         private boolean mIsForwardMask;
@@ -106,21 +115,44 @@ public class MaskedEditText extends AppCompatEditText {
             }
             mMask = mask;
             for(int i = 0; i < mask.length(); i++) {
-                char c = mask.charAt(i);
-                if(c == '\\') {
+                char maskChar = mask.charAt(i);
+                if(maskChar == '\\') {
                     if(i == mask.length() - 1) {
-                        throw new IllegalArgumentException("Wrong mask format! Position " + String.valueOf(i));
+                        mAvailableSymbols.add(new StaticSymbol(maskChar));
+                        break;
                     }
-                    Symbol symbol = getMaskSymbol(mask.charAt(i + 1));
-                    if(symbol == null) {
-                        throw new IllegalArgumentException("Wrong mask format! Unsupported mask symbol '" + mask.charAt(i + 1) + "'. Position " + String.valueOf(i));
+                    char maskValue = mask.charAt(i + 1);
+                    Symbol symbol = createMaskSymbol(maskValue);
+                    if (symbol != null) {
+                        mAvailableSymbols.add(symbol);
+                    } else {
+                        mAvailableSymbols.add(new StaticSymbol(maskChar));
+                        mAvailableSymbols.add(new StaticSymbol(maskValue));
                     }
-                    mAvailableSymbols.add(symbol);
                     i++;
                 } else {
-                    mAvailableSymbols.add(new StaticSymbol(c));
+                    mAvailableSymbols.add(new StaticSymbol(maskChar));
                 }
             }
+        }
+
+        private MaskSymbol createMaskSymbol(char c) {
+            Class<?> symbolClass = mSupportSymbols.get(c);
+            if(symbolClass != null) {
+                Constructor constructor;
+                try {
+                    constructor = symbolClass.getConstructor();
+                    constructor.setAccessible(true);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(String.format("Error create instance of %s.Symbol type must have empty public constructor", symbolClass.getName()), e);
+                }
+                try {
+                    return  (MaskSymbol)constructor.newInstance();
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(String.format("Error create instance of %s", symbolClass.getName()), e);
+                }
+            }
+            return null;
         }
 
         @Override
@@ -212,10 +244,6 @@ public class MaskedEditText extends AppCompatEditText {
             setSelection(mCursorPosition);
         }
 
-        public CharSequence getMask() {
-            return mMask;
-        }
-
         public String getUnmaskedText(){
             String text = "";
             for (Symbol symbol : mUsedSymbols) {
@@ -293,5 +321,86 @@ public class MaskedEditText extends AppCompatEditText {
             }
         }
 
+    }
+
+    /************************************** Symbols **********************************************/
+
+    static abstract class Symbol {
+        private char mChar;
+
+        public final char getChar() {
+            return mChar;
+        }
+
+        protected void setChar(char c) {
+            mChar = c;
+        }
+
+        protected abstract boolean isMask();
+    }
+
+    class StaticSymbol extends Symbol {
+        public StaticSymbol(char c) {
+            setChar(c);
+        }
+
+        @Override
+        protected boolean isMask() {
+            return false;
+        }
+    }
+
+    public static abstract class MaskSymbol extends Symbol {
+        public abstract boolean isAccept(char c);
+
+        protected final boolean trySetChar(char c) {
+            if (isAccept(c)) {
+                setChar(c);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        protected final boolean isMask() {
+            return true;
+        }
+    }
+
+    /********************************** Mask Symbols **********************************************/
+
+    public static class CharSymbol extends MaskSymbol {
+        private static final char MaskChar = 'c';
+
+        @Override
+        public boolean isAccept(char c) {
+            return Character.isLetter(c);
+        }
+    }
+
+    public static class DecimalSymbol extends MaskSymbol {
+        private static final char MaskChar = 'd';
+
+        @Override
+        public boolean isAccept(char c) {
+            return Character.isDigit(c);
+        }
+    }
+
+    public static class UppercaseCharSymbol extends MaskSymbol {
+        private static final char MaskChar = 'C';
+
+        @Override
+        public boolean isAccept(char c) {
+            return Character.isLetter(c);
+        }
+
+        @Override
+        protected void setChar(char c) {
+            if (Character.isLowerCase(c)) {
+                c = Character.toUpperCase(c);
+            }
+            super.setChar(c);
+        }
     }
 }
