@@ -9,14 +9,14 @@ For use MaskedEditText library, add these dependency to the build.gradle of the 
 <dependency>
   <groupId>com.github.buhscout</groupId>
   <artifactId>maskededittext</artifactId>
-  <version>1.0.6</version>
+  <version>1.0.7</version>
   <type>pom</type>
 </dependency>
 ```
 ### Gradle
 ```
 dependencies {
-    compile 'com.github.buhscout:maskededittext:1.0.6'
+    compile 'com.github.buhscout:maskededittext:1.0.7'
 }
 ```
 
@@ -40,6 +40,7 @@ maskedEditText.getUnmaskedText()
 ```
 
 ### Supports mask symbols:
+* **\.** - Any symbol
 * **\d** - Any digit
 * **\c** - Any letter
 * **\C** - Uppercase letter
