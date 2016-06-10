@@ -54,6 +54,7 @@ public class MaskedEditText extends AppCompatEditText {
     }
 
     protected void initSupportSymbols() {
+        registerMaskSymbol(AnySymbol.MaskChar, AnySymbol.class);
         registerMaskSymbol(CharSymbol.MaskChar, CharSymbol.class);
         registerMaskSymbol(DecimalSymbol.MaskChar, DecimalSymbol.class);
         registerMaskSymbol(UppercaseCharSymbol.MaskChar, UppercaseCharSymbol.class);
@@ -368,6 +369,15 @@ public class MaskedEditText extends AppCompatEditText {
     }
 
     /********************************** Mask Symbols **********************************************/
+
+    public static class AnySymbol extends MaskSymbol {
+        private static final char MaskChar = '.';
+
+        @Override
+        public boolean isAccept(char c) {
+            return true;
+        }
+    }
 
     public static class CharSymbol extends MaskSymbol {
         private static final char MaskChar = 'c';
