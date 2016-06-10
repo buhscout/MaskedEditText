@@ -21,20 +21,22 @@ public class MaskedEditText extends AppCompatEditText {
     private CharSequence mMask;
 
     public MaskedEditText(Context context) {
-        this(context, null);
+        super(context, null);
+        init(context, null);
     }
 
     public MaskedEditText(Context context, AttributeSet attrs) {
-        this(context, attrs, android.support.v7.appcompat.R.attr.editTextStyle);
+        super(context, attrs);
+        init(context, attrs);
     }
 
     public MaskedEditText(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init(context, attrs, defStyleAttr);
+        init(context, attrs);
     }
 
-    private void init(Context context, AttributeSet attrs, int defStyleAttr) {
-        TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.MaskedEditText, defStyleAttr, 0);
+    private void init(Context context, AttributeSet attrs) {
+        TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.MaskedEditText);
 
         int indexCount = attributes.getIndexCount();
         String mask = null;
