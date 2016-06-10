@@ -40,7 +40,7 @@ maskedEditText.getUnmaskedText()
 ```
 
 ### Supports mask symbols:
-* **\.** - Any symbol
+* **\\.** - Any symbol
 * **\d** - Any digit
 * **\c** - Any letter
 * **\C** - Uppercase letter
