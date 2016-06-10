@@ -157,7 +157,7 @@ public class MaskedEditText extends AppCompatEditText {
 
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            mTextBefore = s;
+            mTextBefore = s.toString();
             mSelectionStart = getSelectionStart();
             mSelectionEnd = getSelectionEnd();
         }
