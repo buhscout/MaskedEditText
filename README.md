@@ -58,7 +58,7 @@ protected void onCreate(Bundle savedInstanceState) {
 }
 
 /**
-* This custom mask symbol forbids to enter any character except '1', '2', '3', 
+* This custom mask symbol forbids to enter any character except '1', '2', '7', 
 * where using '\z' mask symbol
 **/
 public static class CountrySymbol extends MaskedEditText.MaskSymbol {
