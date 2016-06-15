@@ -9,16 +9,16 @@ import android.text.TextWatcher;
 import android.util.AttributeSet;
 
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Map;
 
 public class MaskedEditText extends AppCompatEditText {
+    private CharSequence mMask;
     private MaskTextWatcher mMaskTextWatcher;
     private boolean mIsForwardMask;
-    private Map<Character, Class<? extends MaskSymbol>> mSupportSymbols = new HashMap<>();
-    private CharSequence mMask;
+    private Map<Character, Class<? extends MaskSymbol>> mSupportSymbols;
 
     public MaskedEditText(Context context) {
         super(context, null);
@@ -53,7 +53,8 @@ public class MaskedEditText extends AppCompatEditText {
         setMask(mask);
     }
 
-    protected void initSupportSymbols() {
+    void initSupportSymbols() {
+        mSupportSymbols = new HashMap<>(4);
         registerMaskSymbol(AnySymbol.MaskChar, AnySymbol.class);
         registerMaskSymbol(CharSymbol.MaskChar, CharSymbol.class);
         registerMaskSymbol(DecimalSymbol.MaskChar, DecimalSymbol.class);
@@ -101,8 +102,8 @@ public class MaskedEditText extends AppCompatEditText {
     }
 
     class MaskTextWatcher implements TextWatcher {
-        private ArrayList<Symbol> mAvailableSymbols = new ArrayList<>();
-        private ArrayList<Symbol> mUsedSymbols = new ArrayList<>();
+        private LinkedList<Symbol> mAvailableSymbols = new LinkedList<>();
+        private LinkedList<Symbol> mUsedSymbols = new LinkedList<>();
         private boolean mIsForwardMask;
         private int mCursorPosition;
         private int mSelectionStart;
@@ -119,20 +120,20 @@ public class MaskedEditText extends AppCompatEditText {
                 char maskChar = mask.charAt(i);
                 if(maskChar == '\\') {
                     if(i == mask.length() - 1) {
-                        mAvailableSymbols.add(new StaticSymbol(maskChar));
+                        mAvailableSymbols.addLast(new StaticSymbol(maskChar));
                         break;
                     }
                     char maskValue = mask.charAt(i + 1);
                     Symbol symbol = createMaskSymbol(maskValue);
                     if (symbol != null) {
-                        mAvailableSymbols.add(symbol);
+                        mAvailableSymbols.addLast(symbol);
                     } else {
-                        mAvailableSymbols.add(new StaticSymbol(maskChar));
-                        mAvailableSymbols.add(new StaticSymbol(maskValue));
+                        mAvailableSymbols.addLast(new StaticSymbol(maskChar));
+                        mAvailableSymbols.addLast(new StaticSymbol(maskValue));
                     }
                     i++;
                 } else {
-                    mAvailableSymbols.add(new StaticSymbol(maskChar));
+                    mAvailableSymbols.addLast(new StaticSymbol(maskChar));
                 }
             }
         }
@@ -181,14 +182,15 @@ public class MaskedEditText extends AppCompatEditText {
 
             if(before == 1 && count == 0 && mSelectionStart == mSelectionEnd) {
                 for (int i = mUsedSymbols.size() - 1; i >= 0; i--) {
-                    Symbol symbol = mUsedSymbols.get(mUsedSymbols.size() - 1);
-                    if(symbol.isMask()) {
+                    if(mUsedSymbols.getLast().isMask()) {
                         removeSymbol();
                         break;
                     }
                     if(!mIsForwardMask || isContainsMaskSymbol(mUsedSymbols, 0, mCursorPosition + 1)) {
                         mCursorPosition--;
                         removeSymbol();
+                    } else {
+                        break;
                     }
                 }
             }
@@ -239,7 +241,7 @@ public class MaskedEditText extends AppCompatEditText {
                 mCursorPosition = 0;
             }
             if (mCursorPosition == mSelectionStart) {
-                setText(text);
+                s.replace(0, s.length(), text);
             }
             addTextChangedListener(mMaskTextWatcher);
             setSelection(mCursorPosition);
@@ -255,14 +257,14 @@ public class MaskedEditText extends AppCompatEditText {
             return text;
         }
 
-        private boolean isContainsMaskSymbol(List<Symbol> symbols) {
+        private boolean isContainsMaskSymbol(LinkedList<Symbol> symbols) {
             return isContainsMaskSymbol(symbols, 0, symbols.size());
         }
 
-        private boolean isContainsMaskSymbol(List<Symbol> symbols, int start, int len) {
-            for (int i = start; i < len; i++) {
-                Symbol symbol = symbols.get(i);
-                if (symbol.isMask()) {
+        private boolean isContainsMaskSymbol(LinkedList<Symbol> symbols, int start, int len) {
+            ListIterator<Symbol> iterator = symbols.listIterator(start);
+            while (iterator.hasNext() && start++ < len) {
+                if (iterator.next().isMask()) {
                     return true;
                 }
             }
@@ -271,40 +273,37 @@ public class MaskedEditText extends AppCompatEditText {
 
         private int removeEndStaticSymbols() {
             for(int i = 0; mUsedSymbols.size() > 0; i++) {
-                int index = mUsedSymbols.size() - 1;
-                Symbol symbol = mUsedSymbols.get(index);
-                if(symbol.isMask()) {
+                if(mUsedSymbols.getLast().isMask()) {
                     return i;
                 }
-                mAvailableSymbols.add(0, mUsedSymbols.remove(index));
+                mAvailableSymbols.addFirst(mUsedSymbols.removeLast());
             }
             return 0;
         }
 
         private int addEndStaticSymbols() {
             for(int i = 0; mAvailableSymbols.size() > 0; i++) {
-                Symbol symbol = mAvailableSymbols.get(0);
-                if(symbol.isMask()) {
+                if(mAvailableSymbols.getFirst().isMask()) {
                     return i;
                 }
-                mUsedSymbols.add(mAvailableSymbols.remove(0));
+                mUsedSymbols.addLast(mAvailableSymbols.removeFirst());
             }
             return 0;
         }
 
         private Symbol removeSymbol() {
-            Symbol symbol = mUsedSymbols.remove(mUsedSymbols.size() - 1);
-            mAvailableSymbols.add(0, symbol);
-            return  symbol;
+            Symbol symbol = mUsedSymbols.removeLast();
+            mAvailableSymbols.addFirst(symbol);
+            return symbol;
         }
 
         private void addText(CharSequence text, int count, boolean isInserted) {
             for (int i = 0, maskAdded = 0; i < text.length() && maskAdded <= count && mAvailableSymbols.size() > 0; ) {
-                Symbol symbol = mAvailableSymbols.get(0);
+                Symbol symbol = mAvailableSymbols.getFirst();
                 if (symbol.isMask()) {
                     for (; i < text.length(); i++) {
                         if (((MaskSymbol) symbol).trySetChar(text.charAt(i))) {
-                            mUsedSymbols.add(mAvailableSymbols.remove(0));
+                            mUsedSymbols.addLast(mAvailableSymbols.removeFirst());
                             i++;
                             maskAdded++;
                             break;
@@ -317,7 +316,7 @@ public class MaskedEditText extends AppCompatEditText {
                     } else if(isInserted) {
                         mCursorPosition++;
                     }
-                    mUsedSymbols.add(mAvailableSymbols.remove(0));
+                    mUsedSymbols.addLast(mAvailableSymbols.removeFirst());
                 }
             }
         }
