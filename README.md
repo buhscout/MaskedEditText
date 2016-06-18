@@ -9,14 +9,14 @@ For use MaskedEditText library, add these dependency to the build.gradle of the 
 <dependency>
   <groupId>com.github.buhscout</groupId>
   <artifactId>maskededittext</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <type>pom</type>
 </dependency>
 ```
 ### Gradle
 ```
 dependencies {
-    compile 'com.github.buhscout:maskededittext:1.0.7'
+    compile 'com.github.buhscout:maskededittext:1.0.8'
 }
 ```
 
