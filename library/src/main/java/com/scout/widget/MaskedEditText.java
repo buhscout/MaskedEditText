@@ -212,8 +212,9 @@ public class MaskedEditText extends AppCompatEditText {
             if(!isContainsMaskSymbol(mAvailableSymbols)) {
                 addEndStaticSymbols();
             } else {
+                boolean anyUsedSymbolIsMask = isContainsMaskSymbol(mUsedSymbols);
                 boolean isLastPosition = mUsedSymbols.size() == mCursorPosition;
-                if(mIsForwardMask) {
+                if(mIsForwardMask || !anyUsedSymbolIsMask) {
                     int addedCount = addEndStaticSymbols();
                     if(addedCount > 0 && isLastPosition) {
                         mCursorPosition += addedCount;
@@ -223,6 +224,9 @@ public class MaskedEditText extends AppCompatEditText {
                     if(removedCount > 0 && isLastPosition) {
                         mCursorPosition -= removedCount;
                     }
+                }
+                if(!anyUsedSymbolIsMask) {
+                    mCursorPosition = mUsedSymbols.size();
                 }
             }
         }
